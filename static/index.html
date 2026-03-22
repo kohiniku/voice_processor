@@ -574,6 +574,7 @@
                 <div class="history-text" onclick="this.classList.toggle('expanded')">${escapeHtml(item.text)}</div>
                 <div class="history-actions">
                     <button class="btn-small" onclick="copyText(this, ${JSON.stringify(item.text).replace(/"/g, '&quot;')})">📋 コピー</button>
+                    <button class="btn-small" onclick="downloadText('${escapeHtml(item.filename)}.txt', ${JSON.stringify(item.text).replace(/"/g, '&quot;')})">⬇️ DL</button>
                     <button class="btn-small btn-delete" onclick="deleteHistory(${item.id})">🗑 削除</button>
                 </div>
             `;
