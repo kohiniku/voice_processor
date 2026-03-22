@@ -19,7 +19,7 @@ COPY pyproject.toml .
 # I should try to use `uv` in the dockerfile if possible, or just pip install the listed dependencies.
 # Given the user instruction "docker composeで", and valid pyproject.toml, let's use pip to install.
 # Note: "openai-whisper" pulls in torch which is heavy. 
-RUN pip install --no-cache-dir fastapi uvicorn python-multipart openai-whisper qwen-asr pydantic-settings
+RUN pip install --no-cache-dir fastapi uvicorn python-multipart openai-whisper qwen-asr pydantic-settings pydub
 
 COPY . .
 

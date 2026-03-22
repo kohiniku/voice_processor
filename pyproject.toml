@@ -11,4 +11,5 @@ dependencies = [
     "openai-whisper",
     "qwen-asr",
     "pydantic-settings",
+    "pydub",
 ]

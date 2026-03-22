@@ -1,8 +1,10 @@
 import os
 import shutil
 import tempfile
+from collections.abc import Generator
 from fastapi import UploadFile
 from app.core.config import settings
+from app.services.audio_chunker import AudioChunker
 
 
 LANGUAGE_CODE_MAP = {
@@ -63,7 +65,7 @@ class TranscriptionService:
             f"Current value: {settings.ASR_BACKEND}"
         )
 
-    async def transcribe(self, file: UploadFile, language: str = None) -> dict:
+    async def transcribe(self, file: UploadFile, language: str | None = None) -> dict:
         temp_audio_path = None
         try:
             suffix = f".{file.filename.split('.')[-1]}" if file.filename else ".tmp"
@@ -71,21 +73,45 @@ class TranscriptionService:
                 shutil.copyfileobj(file.file, temp_audio)
                 temp_audio_path = temp_audio.name
 
-            lang = language or settings.DEFAULT_LANGUAGE
-
-            if self.backend == "whisper":
-                result = self.model.transcribe(temp_audio_path, language=lang)
-                return {"text": result["text"]}
-
-            result = self.model.transcribe(
-                audio=temp_audio_path,
-                language=self._normalize_qwen_language(lang),
-            )
-            return {"text": self._extract_qwen_text(result)}
+            text = self._transcribe_single_file(temp_audio_path, language)
+            return {"text": text}
 
         finally:
             if temp_audio_path and os.path.exists(temp_audio_path):
                 os.remove(temp_audio_path)
+
+    def transcribe_chunked(
+        self, audio_path: str, language: str | None = None
+    ) -> Generator[tuple[int, int, str], None, None]:
+        """Yield *(chunk_index, total_chunks, partial_text)* for each chunk."""
+        chunker = AudioChunker()
+        lang = language or settings.DEFAULT_LANGUAGE
+        chunks = chunker.chunk(audio_path, settings.CHUNK_DURATION_SECONDS)
+        try:
+            for chunk in chunks:
+                text = self._transcribe_single_file(chunk.path, lang)
+                yield chunk.index, chunk.total, text
+        finally:
+            chunker.cleanup(chunks)
+
+    # ── private helpers ──────────────────────────────────────────
+
+    def _transcribe_single_file(
+        self, audio_path: str, language: str | None = None
+    ) -> str:
+        """Transcribe a single audio file and return the text."""
+        lang = language or settings.DEFAULT_LANGUAGE
+
+        if self.backend == "whisper":
+            result = self.model.transcribe(audio_path, language=lang)
+            return result["text"]
+
+        result = self.model.transcribe(
+            audio=audio_path,
+            language=self._normalize_qwen_language(lang),
+        )
+        return self._extract_qwen_text(result)
+
 
     def _normalize_qwen_language(self, language: str | None) -> str | None:
         if not language:

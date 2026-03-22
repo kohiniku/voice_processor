@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     QWEN_MAX_NEW_TOKENS: int = 256
     QWEN_MAX_INFERENCE_BATCH_SIZE: int = 1
     DEFAULT_LANGUAGE: str = "ja"
+    CHUNK_DURATION_SECONDS: int = 300
 
     class Config:
         env_file = ".env"
